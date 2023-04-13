@@ -184,7 +184,7 @@ def process_image(n: NeuroNetwork, size: int, init, read, save):
                 print('Cannot determine')
             else:
                 try:
-                    crop = filtered_mask[y:y + h, x:x + w]
+                    crop = mask[y:y + h, x:x + w]
                     cv2.imshow("Cropped", crop)
                     resized = cv2.resize(crop, (size, size))
                     cv2.imshow("Resized", cv2.resize(resized, (300, 300)))

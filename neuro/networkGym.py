@@ -70,40 +70,51 @@ class NetworkGym:
             if self.network.hidden:
                 # TODO: Training of the neural network
                 n = len(self.network.theta)
+                z = [None] * n
+                sz = [None] * n
+
+                for i in range(n):
+
+                    if i == 0:
+                        z[0] = x.T * self.network.theta[0]
+                    else:
+                        z[i] = sz[i - 1] * self.network.theta[i]
+
+                    sz[i] = NeuroNetwork.sigmoid(z[i])
+                    sz[i] = np.insert(sz[i], 0, 1, axis=1)
+
                 error = [None] * n
-                z = [None] * (n - 1)
+                error[n - 1] = sz[n - 1][:, 1:] - y.T
+
+                for i in range(n - 2, -1, -1):
+                    error[i] = error[i + 1] * self.network.theta[i + 1].T
+                    error[i] = error[i][:, 1:]
+
+                for i in range(n):
+                    error[i] = np.multiply(error[i], np.multiply(sz[i][:, 1:], 1.0 - sz[i][:, 1:]))
 
                 grad = [None] * n
 
-                error[n - 1] = p - y
-                z[0] = x.T * self.network.theta[0]
+                grad[0] = (error[0].T * x.T) / m
 
-                error[n - 2] = error[n - 1].T * self.network.theta[1].T
-                error[n - 2] = error[n - 2][:, 1:]
+                for i in range(1, n):
+                    grad[i] = (error[i].T * sz[i - 1]) / m
 
-                sz = NeuroNetwork.sigmoid(z[0])
-
-                error[n - 2] = np.multiply(error[n - 2], np.multiply(sz, 1 - sz))
-
-                sz = np.insert(sz, 0, 1, axis=1)
-
-                grad[0] = (error[n - 2].T * x.T) / m
-                grad[1] = (error[n - 1] * sz) / m
-
-                for i in range(0, len(self.network.theta)):
-                    self.network.theta[i] -= alpha * grad[i].T
+                for i in range(n):
+                    self.network.theta[i] -= np.multiply(grad[i].T, alpha)
 
             else:
                 grad = x * (p - y).T / m + np.matrix(np.insert(self.network.theta[1:], 0, 0)).T * self.lamda / m
 
-                theta = self.network.theta - grad * alpha
-                self.network.theta = theta
+                self.network.theta = self.network.theta - grad * alpha
 
             cost = self.cost()
+            theta = self.network.theta
+
             if write_log:
                 s = ''
                 if speed_up:
-                    s = " Alpha: {}".format(alpha)
+                    s = " | Alpha: {}".format(alpha)
 
                 print(f'Iteration: {j + 1} | Cost: {cost:.6}{s}')
 

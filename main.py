@@ -49,7 +49,6 @@ n = NeuroNetwork()
 theta = []
 
 for path in os.listdir(path_theta):
-    print(path)
     if path == 'theta.npy':
         with open(path_theta + f'\\theta.npy', 'rb') as f:
             theta = np.load(f)

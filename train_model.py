@@ -8,9 +8,9 @@ import random
 from neuro.networkGym import NeuroNetwork, NetworkGym
 
 shapes = [1, 0, 0, 0]
-noises = [15, 5, 5, 5]
+noises = [3, 1, 1, 1]
 
-size = 16
+size = 4
 percents_for_train = 0.7
 
 path_theta = r'neuro/theta'
@@ -85,8 +85,8 @@ print('Triangles...')
 download_set(r'/shapes/triangle', triangles, shapes[3], noises[3])
 
 print('Additional dataset...')
-download_set(path_save_true, corrections, 1, duplications=30, inverse=False)
-download_set(path_save_false, corrections, 0, duplications=15, inverse=False)
+download_set(path_save_true, corrections, 1, duplications=2, inverse=False)
+download_set(path_save_false, corrections, 0, duplications=1, inverse=False)
 
 print('Loading complete.\n')
 
@@ -108,14 +108,14 @@ ng = NetworkGym(n, train_set, test_set, lamda=0.1)
 start_train = datetime.now()
 while True:
     print('\nFitting...')
-    ng.train(alpha=2.5, number_of_iterations=25, write_log=True)
+    ng.train(alpha=4, number_of_iterations=75, write_log=True)
 
     a, tt, ff = ng.test(0.7)
 
     print(f'\nAccuracy: {a:.1%}\n\n'
           f'Correct:    True - {tt:.1%}  False - {ff:.1%}\n')
 
-    if tt > 0.85 and ff > 0.85:
+    if tt > 0.9 and ff > 0.9:
         break
 
 stop_train = datetime.now()
