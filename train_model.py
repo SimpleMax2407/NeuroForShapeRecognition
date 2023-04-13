@@ -10,7 +10,7 @@ from neuro.networkGym import NeuroNetwork, NetworkGym
 shapes = [1, 0, 0, 0]
 noises = [3, 1, 1, 1]
 
-size = 4
+size = 6
 percents_for_train = 0.7
 
 path_theta = r'neuro/theta'
@@ -108,7 +108,7 @@ ng = NetworkGym(n, train_set, test_set, lamda=0.1)
 start_train = datetime.now()
 while True:
     print('\nFitting...')
-    ng.train(alpha=4, number_of_iterations=75, write_log=True)
+    ng.train(alpha=12, number_of_iterations=125, write_log=True, speed_up=True)
 
     a, tt, ff = ng.test(0.7)
 

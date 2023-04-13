@@ -43,7 +43,7 @@ class NetworkGym:
             cost = 0
         return cost
 
-    def train(self, alpha=1, number_of_iterations=10, diode=False, write_log=True, speed_up=False):
+    def train(self, alpha=1, number_of_iterations=10, write_log=True, speed_up=False):
 
         if not self.train_examples:
             raise Exception("There are no training examples for training")
@@ -61,7 +61,6 @@ class NetworkGym:
         x = np.matrix(x_m).T
 
         old_cost = -1
-        old_theta = []
 
         for j in range(0, number_of_iterations):
 
@@ -118,18 +117,13 @@ class NetworkGym:
 
                 print(f'Iteration: {j + 1} | Cost: {cost:.6}{s}')
 
-            if diode or speed_up:
+            if speed_up:
                 if old_cost < 0:
                     old_cost = cost
-                    old_theta = theta.copy()
-                elif old_cost <= cost:
-                    if diode:
-                        theta = old_theta.copy()
-                else:
-                    if speed_up:
-                        alpha = 1/(old_cost - cost)
-                    old_cost = cost
-                    old_theta = theta.copy()
+                elif 1e-4 > old_cost - cost > 0:
+                    alpha *= 1.2
+
+                old_cost = cost
 
         return
 
