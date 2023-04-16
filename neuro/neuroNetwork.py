@@ -54,7 +54,7 @@ class NeuroNetwork:
     def sigmoid(x: float):
         return 1/(1 + np.exp(-x))
 
-    def predict(self, input_data, border=-1, first_element_is_one=True):
+    def predict(self, input_data, border=-1, first_element_is_one=True, only_output=False):
 
         if not first_element_is_one:
             input_data = np.append([[1]], input_data, 0)
@@ -75,13 +75,37 @@ class NeuroNetwork:
         else:
             output = self.theta.T * input_data
 
-        if 1e-2 < border < (1 - 1e-2):
-            border = -np.log(1/border - 1)
-            bl = np.vectorize(lambda o: 1 if o >= border else 0)
-            output = bl(output)
+        if len(output) > 1:
+
+            if only_output:
+                res = output.tolist().index(np.array(max(output.tolist())))
+
+                if 0 < border < 1:
+                    border = -np.log(1 / border - 1)
+                    if border > max(output):
+                        res = 0
+
+                output = res
+
+            else:
+                if 0 < border < 1:
+                    border = -np.log(1 / border - 1)
+                    for i in range(len(output)):
+                        output[i] = 1 if output[i] >= border else 0
+                else:
+                    # bl = np.vectorize(lambda o: 30 if o > 30 else (-30 if o < -30 else o))
+                    # output = bl(output)
+                    output = 1.0 / (1 + np.exp(-output))
+
         else:
-            bl = np.vectorize(lambda o: 30 if o > 30 else (-30 if o < -30 else o))
-            output = bl(output)
-            output = 1/(1 + np.exp(-output))
+            if 1e-2 < border < (1 - 1e-2):
+                border = -np.log(1/border - 1)
+                bl = np.vectorize(lambda o: 1 if o >= border else 0)
+                output = bl(output)
+
+            else:
+                # bl = np.vectorize(lambda o: 30 if o > 30 else (-30 if o < -30 else o))
+                # output = bl(output)
+                output = 1/(1 + np.exp(-output))
 
         return output
