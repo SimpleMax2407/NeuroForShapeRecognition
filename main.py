@@ -1,4 +1,5 @@
 import cv2
+import json
 import numpy as np
 import os
 
@@ -48,16 +49,22 @@ n = NeuroNetwork()
 
 theta = []
 
+with open(path_theta + f'\\settings.json', 'r') as f:
+    settings = json.load(f)
+
 for path in os.listdir(path_theta):
     if path == 'theta.npy':
         with open(path_theta + f'\\theta.npy', 'rb') as f:
             theta = np.load(f)
             break
-    else:
+    elif path != "settings.json":
         with open(path_theta + '\\' + path, 'rb') as f:
             theta.append(np.load(f))
 
 n.get_theta(theta)
-size = round(np.sqrt(n.inputs))
 
-process_image(n, size, init_cam, read_cam, save_img)
+size_x = settings['size_x']
+size_y = settings['size_y']
+shapes_names = settings['shapes_names']
+
+process_image(n, size_x, size_y, shapes_names, init_cam, read_cam, save_img)

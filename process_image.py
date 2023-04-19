@@ -8,7 +8,7 @@ def nothing(self):
     pass
 
 
-def process_image(n: NeuroNetwork, size: int, init, read, save):
+def process_image(n: NeuroNetwork, size_x: int, size_y: int, shapes_names, init, read, save):
 
     init()
 
@@ -168,33 +168,34 @@ def process_image(n: NeuroNetwork, size: int, init, read, save):
         # if key is R, calculate position and send to ESP32 CAM
         elif key == ord('r') and c_exist:
 
-            x, y, w, h = cv2.boundingRect(c)
-
             # getting size of image
-            size_x = len(frame[0])
-            size_y = len(frame)
+            size_fx = len(frame[0])
+            size_fy = len(frame)
 
             # position calculation
-            ang_x = (x + w/2 - size_x/2)/size_x * h_fow
-            ang_y = (y + h/2 - size_y/2)/size_y * v_fow
+            ang_x = (x + w/2 - size_fx/2)/size_fx * h_fow
+            ang_y = (y + h/2 - size_fy/2)/size_fy * v_fow
 
             print(f'Position: {ang_x} deg, {ang_y} deg ({len(approx)} corners)')
 
-            if w < size or h < size:
-                print('Cannot determine')
+            if w < size_x or h < size_y:
+                print('Object is too little')
             else:
                 try:
                     crop = mask[y:y + h, x:x + w]
                     cv2.imshow("Cropped", crop)
-                    resized = cv2.resize(crop, (size, size))
+                    resized = cv2.resize(crop, (size_x, size_y))
                     cv2.imshow("Resized", cv2.resize(resized, (300, 300)))
-                    percent = np.sum(n.predict(np.matrix((resized / 255).flatten()).T,
-                                               first_element_is_one=False))
-                    print(f'Is circle: {percent}')
+                    shape = n.predict(np.matrix((resized / 255.0).flatten()).T, first_element_is_one=False)
+
+                    print(f'Shape: ')
+                    for i in range(len(list(shape))):
+                        print(f'{shapes_names[i]}: {shape[i,0]:.1%}')
+
                     last_image = crop.copy()
 
-                except:
-                    print('Oops...')
+                except Exception as e:
+                    print(f'Oops... ({str(e)})')
 
             cv2.waitKey(1500)
 

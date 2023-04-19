@@ -4,13 +4,12 @@ import numpy as np
 
 class NetworkGym:
 
-    def __init__(self, network=NeuroNetwork(), train_examples=None, test_examples=None, lamda=0):
+    def __init__(self, network=NeuroNetwork(), train_examples=None, test_examples=None):
         self.network = network
         self.train_examples = train_examples
         self.test_examples = test_examples
-        self.lamda = lamda
 
-    def cost(self):
+    def cost(self, lamda=0):
 
         if not self.train_examples:
             raise Exception("There are no training examples for cost measuring")
@@ -34,31 +33,29 @@ class NetworkGym:
         p = self.network.predict(x)
 
         cost = -np.multiply(y, np.log(p)) - np.multiply((1 - y), np.log(1 - p))
-        # cost = cost.sum()
         s = 0
         m_c, n_c = cost.shape
         for i in range(m_c):
             for j in range(n_c):
                 if np.isinf(cost[i, j]):
-                    # print(f'Inf: {i}, {j}, Y: {y[i, j]}, P: {p[i, j]}')
                     s += 50
-                # elif np.isnan(cost[i, j]):
-                #     print(f'NaN: {i}, {j}, Y: {y[i, j]}, P: {p[i, j]}')
-                # elif p[i, j] > 0.5 and y[i, j] == 0:
-                #     print(f'{cost[i, j]}: {i}, {j}, Y: {y[i, j]}, P: {p[i, j]}')
                 elif not np.isnan(cost[i, j]):
                     s += cost[i, j]
 
-        # if self.network.hidden:
-        #     for theta in self.network.theta:
-        #         cost += np.sum(np.multiply(theta[1:, :],  theta[1:, :])) * self.lamda / 2 / m
-        # else:
-        #     cost += np.sum(np.multiply(self.network.theta[1:, :], self.network.theta[1:, :])) * self.lamda / 2 / m
+        s = s/m
 
-        return s / m
-        # return cost
+        if self.network.hidden:
+            for theta in self.network.theta:
+                theta[0, :] = 0
+                s += np.sum(np.multiply(theta, theta)) * lamda / 2 / m
+        else:
+            theta = self.network.theta
+            theta[0, :] = 0
+            s += np.sum(np.multiply(theta, theta)) * lamda / 2 / m
 
-    def train(self, alpha=1, number_of_iterations=10, write_log=True, speed_up=False):
+        return s
+
+    def train(self, alpha=1, lamda=0, number_of_iterations=10, write_log=True, speed_up=False):
 
         if not self.train_examples:
             raise Exception("There are no training examples for training")
@@ -119,15 +116,21 @@ class NetworkGym:
                     grad[i] = (error[i].T * sz[i - 1]) / m
 
                 for i in range(n):
+                    theta = self.network.theta[i]
+                    theta[0, :] = 0
+                    grad[i] += np.multiply(theta.T, lamda / m)
                     self.network.theta[i] -= np.multiply(grad[i].T, alpha)
 
             else:
                 grad = x * (p - y).T / m
-                grad += np.matrix(np.insert(self.network.theta[1:], 0, 0)).T * self.lamda / m
 
-                self.network.theta = self.network.theta - grad * alpha
+                theta = self.network.theta
+                theta[0, :] = 0
+                grad += np.multiply(theta, lamda / m)
+                self.network.theta -= np.multiply(grad, alpha)
 
-            cost = self.cost()
+            if write_log or speed_up:
+                cost = self.cost(lamda=lamda)
 
             if write_log:
                 s = ''
@@ -137,8 +140,8 @@ class NetworkGym:
                 print(f'Iteration: {j + 1} | Cost: {cost:.6}{s}')
 
             if speed_up:
-                if old_cost > 0 and 1e-4 > (old_cost - cost) / alpha > 0:
-                    alpha *= 1.2
+                if old_cost > 0 and alpha * 1e-3 > old_cost - cost > 0:
+                    alpha *= 1.1
 
                 old_cost = cost
 
@@ -156,16 +159,19 @@ class NetworkGym:
 
             y = t_e['result']
             x = t_e['arguments']
-            p = self.network.predict(np.matrix(np.insert(x, 0,  1)).T, border, only_output=True)
+            p = self.network.predict(np.matrix(x).T, border, first_element_is_one=False, only_output=True)
 
             stat[y] += 1 if p == y else 0
             num[y] += 1
 
         accuracy = np.sum(stat) / m
 
+        any_false = True
+
         if num[0] == 0:
+            any_false = False
             num[0] = 1
 
         stat = np.divide(stat, num)
 
-        return accuracy, stat
+        return accuracy, stat, any_false

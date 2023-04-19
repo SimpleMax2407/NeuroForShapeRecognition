@@ -78,7 +78,7 @@ class NeuroNetwork:
         if len(output) > 1:
 
             if only_output:
-                res = output.tolist().index(np.array(max(output.tolist())))
+                res = output.tolist().index(np.array(max(output.tolist()))) + 1
 
                 if 0 < border < 1:
                     border = -np.log(1 / border - 1)
@@ -93,8 +93,6 @@ class NeuroNetwork:
                     for i in range(len(output)):
                         output[i] = 1 if output[i] >= border else 0
                 else:
-                    # bl = np.vectorize(lambda o: 30 if o > 30 else (-30 if o < -30 else o))
-                    # output = bl(output)
                     output = 1.0 / (1 + np.exp(-output))
 
         else:
@@ -104,8 +102,6 @@ class NeuroNetwork:
                 output = bl(output)
 
             else:
-                # bl = np.vectorize(lambda o: 30 if o > 30 else (-30 if o < -30 else o))
-                # output = bl(output)
                 output = 1/(1 + np.exp(-output))
 
         return output

@@ -1,16 +1,22 @@
+import json
+
 import cv2
 from datetime import datetime
 import glob
+import json
 import numpy as np
 import os
 import random
 
 from neuro.networkGym import NeuroNetwork, NetworkGym
 
-shapes = [1, 2, 0, 0]
-noises = [2, 2, 1, 1]
+shapes = [1, 2, 3, 4]
+shapes_names = ["Circles", "Squares", "Stars", "Triangles"]
+noises = [0, 0, 0, 0]
 
-size = 6
+size_x = 12
+size_y = 8
+
 percents_for_train = 0.7
 
 path_theta = r'neuro/theta'
@@ -31,7 +37,7 @@ def download_set(path_l, list_l, output_result, noised=0, duplications=1, invers
         x, y, w, h = cv2.boundingRect(c)
 
         img = img[x:x + w, y:y + h]
-        img = cv2.resize(img, (size, size))
+        img = cv2.resize(img, (size_x, size_y))
         img = img.flatten() / 255
 
         for _ in range(duplications):
@@ -56,6 +62,13 @@ def set_distribution(tr_set, t_set, list_l):
         else:
             t_set.append(list_l[i])
     return
+
+
+def check_boolean_function(lst, possibility):
+    for element in lst:
+        if not element >= possibility:
+            return False
+    return True
 
 
 circles = []
@@ -101,28 +114,47 @@ set_distribution(train_set, test_set, triangles)
 set_distribution(train_set, test_set, corrections)
 
 
-n = NeuroNetwork(size**2, max(shapes), [size])
+n = NeuroNetwork(size_x * size_y, max(shapes), [size_x + size_y])
 
-ng = NetworkGym(n, train_set, test_set, lamda=0.1)
+ng = NetworkGym(n, train_set, test_set)
 
+old_stat = [None] * (max(shapes) + 1)
 start_train = datetime.now()
+
 while True:
     print('\nFitting...')
-    ng.train(alpha=3, number_of_iterations=50, write_log=True, speed_up=True)
+    ng.train(alpha=2, lamda=0.1, number_of_iterations=20, write_log=True, speed_up=True)
 
-    a, stat = ng.test(0.7)
+    a, stat, af = ng.test(0.7)
 
-    print(f'\nAccuracy: {a:.1%}\n\n'
-          f'Correct:    {stat}')
+    print(f'\nAccuracy: {a:.1%}\n')
+    print(f'Statistics:')
 
-    if a > 0.9:
+    if af:
+        print(f'Undefined: {stat[0]:.1%}')
+
+    for i in range(1, len(stat)):
+
+        ch = ""
+        if old_stat[0] is not None:
+            ch = ' ({}%)'.format(round((stat[i] - old_stat[i])*100, 1))
+
+        print(f'{shapes_names[i - 1]}: {stat[i]:.1%}{ch}')
+
+    if check_boolean_function(stat if af else stat[1:], 0.9):
         break
+
+    old_stat = stat
 
 stop_train = datetime.now()
 
 files = glob.glob(r'neuro\theta\*.npy')
+
 for f in files:
     os.remove(f)
+
+with open(path_theta + "\\settings.json", 'w') as f:
+    json.dump({"size_x": size_x, "size_y": size_y, "shapes_names": shapes_names}, f)
 
 if not n.hidden:
     with open(path_theta + "\\theta.npy", 'wb') as f:
