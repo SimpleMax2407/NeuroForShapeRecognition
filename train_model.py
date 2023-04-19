@@ -1,5 +1,3 @@
-import json
-
 import cv2
 from datetime import datetime
 import glob
@@ -12,9 +10,10 @@ from neuro.networkGym import NeuroNetwork, NetworkGym
 
 shapes = [1, 2, 3, 4]
 shapes_names = ["Circles", "Squares", "Stars", "Triangles"]
-noises = [0, 0, 0, 0]
 
-size_x = 12
+number_of_noised_samples = 3700
+
+size_x = 8
 size_y = 8
 
 percents_for_train = 0.7
@@ -22,7 +21,7 @@ percents_for_train = 0.7
 path_theta = r'neuro/theta'
 
 
-def download_set(path_l, list_l, output_result, noised=0, duplications=1, inverse=True):
+def download_set(path_l, list_l, output_result, duplications=1, inverse=True):
 
     for path in os.listdir(dir_path + path_l):
         img = cv2.imread(dir_path + path_l + "/" + path, cv2.IMREAD_UNCHANGED)
@@ -38,29 +37,21 @@ def download_set(path_l, list_l, output_result, noised=0, duplications=1, invers
 
         img = img[x:x + w, y:y + h]
         img = cv2.resize(img, (size_x, size_y))
-        img = img.flatten() / 255
+        img = img.flatten() / 255.0
 
         for _ in range(duplications):
             list_l.append({'result': output_result, 'arguments': img})
-
-        for _ in range(0, noised):
-            i_img = img.copy()
-
-            for ind, i in enumerate(i_img):
-                i_img[ind] = ((i + random.uniform(-0.1, 0.1) * 10) % 10) / 10.0
-
-            list_l.append({'result': output_result, 'arguments': i_img})
 
 
 def set_distribution(tr_set, t_set, list_l):
     indexes = np.sort(random.sample(range(0, len(list_l)), round(percents_for_train * len(list_l))))
 
-    for i in range(0, len(list_l)):
-        if indexes.any() and i == indexes[0]:
-            tr_set.append(list_l[i])
+    for itr in range(0, len(list_l)):
+        if indexes.any() and itr == indexes[0]:
+            tr_set.append(list_l[itr])
             indexes = indexes[1:]
         else:
-            t_set.append(list_l[i])
+            t_set.append(list_l[itr])
     return
 
 
@@ -75,7 +66,7 @@ circles = []
 squares = []
 stars = []
 triangles = []
-corrections = []
+noised_samples = []
 
 # folder with dataset path
 dir_path = 'dataset'
@@ -84,62 +75,73 @@ path_save_false = r'/correction/false'
 
 print('Loading datasets:')
 
+# start timer for measurement execution time
 start_exe = datetime.now()
+
+# load dataset
 print('Circles...')
-download_set(r'/shapes/circle', circles, shapes[0], noises[0])
+download_set(r'/shapes/circle', circles, shapes[0])
 
 print('Squares...')
-download_set(r'/shapes/square', squares, shapes[1], noises[1])
+download_set(r'/shapes/square', squares, shapes[1])
 
 print('Stars...')
-download_set(r'/shapes/star', stars, shapes[2], noises[2])
+download_set(r'/shapes/star', stars, shapes[2])
 
 print('Triangles...')
-download_set(r'/shapes/triangle', triangles, shapes[3], noises[3])
+download_set(r'/shapes/triangle', triangles, shapes[3])
 
-print('Additional dataset...')
-download_set(path_save_true, corrections, 1, duplications=1, inverse=False)
-download_set(path_save_false, corrections, 0, duplications=1, inverse=False)
+print('Noised samples...')
+for _ in range(number_of_noised_samples):
+    noised_samples.append({'result': 0, 'arguments': list(round(random.uniform(0, 1), 2)
+                                                          for _ in range(size_x * size_y))})
 
 print('Loading complete.\n')
 
 train_set = []
 test_set = []
 
+# filling datasets for learning and testing
 print('Filling datasets for neural networks...')
 set_distribution(train_set, test_set, circles)
 set_distribution(train_set, test_set, squares)
 set_distribution(train_set, test_set, stars)
 set_distribution(train_set, test_set, triangles)
-set_distribution(train_set, test_set, corrections)
+set_distribution(train_set, test_set, noised_samples)
 
-
+# creation of NN
 n = NeuroNetwork(size_x * size_y, max(shapes), [size_x + size_y])
 
+# creating entity for learning and testing NN
 ng = NetworkGym(n, train_set, test_set)
 
 old_stat = [None] * (max(shapes) + 1)
+
+# start timer for measurement learning time
 start_train = datetime.now()
 
 while True:
+    # learning NN
     print('\nFitting...')
-    ng.train(alpha=2, lamda=0.1, number_of_iterations=20, write_log=True, speed_up=True)
+    ng.train(alpha=6, lamda=0.1, number_of_iterations=20, write_log=True, speed_up=True)
 
+    # testing NN
     a, stat, af = ng.test(0.7)
 
     print(f'\nAccuracy: {a:.1%}\n')
     print(f'Statistics:')
 
-    if af:
-        print(f'Undefined: {stat[0]:.1%}')
-
-    for i in range(1, len(stat)):
+    # print testing results
+    for i in range(0, len(stat)):
+        # if there are no undefined testing samples then don't print statistics about undefined samples recognition
+        if not af:
+            continue
 
         ch = ""
         if old_stat[0] is not None:
             ch = ' ({}%)'.format(round((stat[i] - old_stat[i])*100, 1))
 
-        print(f'{shapes_names[i - 1]}: {stat[i]:.1%}{ch}')
+        print(f'{shapes_names[i - 1] if i > 0 else "Undefined"}: {stat[i]:.1%}{ch}')
 
     if check_boolean_function(stat if af else stat[1:], 0.9):
         break
@@ -167,4 +169,3 @@ else:
 stop_exe = datetime.now()
 
 print(f'\nTraining time: {stop_train - start_train}\nExecution time: {stop_exe - start_exe}')
-

@@ -136,11 +136,6 @@ def process_image(n: NeuroNetwork, size_x: int, size_y: int, shapes_names, init,
             cv2.rectangle(res, (x, y), (x + w, y + h), (0, 255, 0), 4)
             c_exist = True
 
-            approx = cv2.approxPolyDP(c, 0.01 * cv2.arcLength(c, True), True)
-
-            for p in approx:
-                cv2.circle(res, (p[0][0], p[0][1]), 2, (255, 0, 0), 4)
-
         cv2.imshow("Live transmission", res)
         cv2.imshow("Mask", mask)
         cv2.imshow("Filtered mask", filtered_mask)
@@ -176,7 +171,7 @@ def process_image(n: NeuroNetwork, size_x: int, size_y: int, shapes_names, init,
             ang_x = (x + w/2 - size_fx/2)/size_fx * h_fow
             ang_y = (y + h/2 - size_fy/2)/size_fy * v_fow
 
-            print(f'Position: {ang_x} deg, {ang_y} deg ({len(approx)} corners)')
+            print(f'Position: {ang_x} deg, {ang_y} deg')
 
             if w < size_x or h < size_y:
                 print('Object is too little')
@@ -190,7 +185,7 @@ def process_image(n: NeuroNetwork, size_x: int, size_y: int, shapes_names, init,
 
                     print(f'Shape: ')
                     for i in range(len(list(shape))):
-                        print(f'{shapes_names[i]}: {shape[i,0]:.1%}')
+                        print(f'  {shapes_names[i]}: {shape[i,0]:.1%}')
 
                     last_image = crop.copy()
 
