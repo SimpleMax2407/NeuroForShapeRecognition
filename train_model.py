@@ -16,6 +16,8 @@ number_of_noised_samples = 3700
 size_x = 8
 size_y = 8
 
+max_number_of_iterations = 150
+
 percents_for_train = 0.7
 
 path_theta = r'neuro/theta'
@@ -120,10 +122,14 @@ old_stat = [None] * (max(shapes) + 1)
 # start timer for measurement learning time
 start_train = datetime.now()
 
-while True:
+iterations = 0
+for _ in range(max_number_of_iterations):
+
+    iterations += 1
+
     # learning NN
     print('\nFitting...')
-    ng.train(alpha=6, lamda=0.1, number_of_iterations=20, write_log=True, speed_up=True)
+    ng.train(alpha=4, lamda=0.1, number_of_iterations=20, write_log=False)   # , write_log=True, speed_up=True
 
     # testing NN
     a, stat, af = ng.test(0.7)
@@ -169,3 +175,4 @@ else:
 stop_exe = datetime.now()
 
 print(f'\nTraining time: {stop_train - start_train}\nExecution time: {stop_exe - start_exe}')
+print(f'Number of iterations: {iterations}')
