@@ -7,17 +7,17 @@ import random
 from neuro.networkGym import NeuroNetwork, NetworkGym
 
 shapes = [1, 2, 3, 4]
-shapes_names = ["Circles", "Squares", "Stars", "Triangles"]
+shapes_names = ["White noises", "Circles", "Squares", "Stars", "Triangles"]
 
 number_of_noised_samples = 3700
 
 min_size = 3
 max_size = 12
 
-max_number_of_iterations = 150
-number_of_attempts = 2
+max_number_of_iterations = 50
+number_of_attempts = 3
 
-percents_for_train = 0.7
+percents_for_train = 0.67
 
 path_theta = r'neuro/theta'
 
@@ -44,6 +44,8 @@ def download_set(path_l, list_l, output_result, duplications=1, inverse=True):
         img = img[x:x + w, y:y + h]
         img = cv2.resize(img, (size, size))
         img = img.flatten() / 255.0
+
+        img = [1 if pix > 0.5 else 0 for pix in img]
 
         for _ in range(duplications):
             list_l.append({'result': output_result, 'arguments': img})
@@ -117,12 +119,12 @@ for size in range(min_size, max_size + 1):
     for att in range(number_of_attempts):
 
         # creation of NN
-        n = NeuroNetwork(size ** 2, max(shapes), [2 * size])
+        n = NeuroNetwork(size ** 2, max(shapes), [36])
 
         # creating entity for learning and testing NN
         ng = NetworkGym(n, train_set, test_set)
 
-        accuracy = 0.0
+        old_accuracy = 0.0
         af = False
         old_stat = [None] * (max(shapes) + 1)
 
@@ -130,13 +132,13 @@ for size in range(min_size, max_size + 1):
         for itr in range(max_number_of_iterations):
 
             # learning NN
-            print(f'\nFitting (iteration #{itr})...')
-            ng.train(alpha=4, lamda=0.1, number_of_iterations=25, write_log=False)
+            print(f'\nFitting (iteration #{itr + 1})...')
+            ng.train(alpha=4, lamda=0.1, number_of_iterations=50, write_log=False)
 
             # testing NN
             accuracy, stat, af = ng.test(0.7)
 
-            print(f'\nAccuracy: {accuracy:.1%}\n')
+            print(f'\nAccuracy: {accuracy:.1%} ({accuracy - old_accuracy:.1%})\n')
             print(f'Statistics (size {size} px):')
 
             # print testing results
@@ -149,31 +151,34 @@ for size in range(min_size, max_size + 1):
                 if old_stat[0] is not None:
                     ch = ' ({}%)'.format(round((stat[i] - old_stat[i])*100, 1))
 
-                print(f'{shapes_names[i - 1] if i > 0 else "Undefined"}: {stat[i]:.1%}{ch}')
+                print(f'{shapes_names[i]}: {stat[i]:.1%}{ch}')
 
             old_stat = stat
+            old_accuracy = accuracy
 
-        # if all(x > 0.9 for x in (old_stat if af else old_stat[1:])):
-        #     break
-
-        if att == 0 or accuracy > s['Accuracy']:
+        if att == 0 or old_accuracy > s['Accuracy']:
             s = {
                 'Number of pixels': size,
-                'Accuracy': accuracy,
+                'Accuracy': old_accuracy,
             }
 
-            for i in range(1, len(old_stat)):
-                s[shapes_names[i - 1]] = old_stat[i]
+            for i in range(0, len(old_stat)):
+                s[shapes_names[i]] = old_stat[i]
 
     statistics.append(s)
 
-with open('NN_stats.csv', 'w', newline='') as csvfile:
-    fieldnames = ['Number of pixels', 'Accuracy']
+with open('Test.csv', 'w', newline='') as csvfile:
 
-    for sn in shapes_names:
-        fieldnames.append(sn)
-
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=';')
+    writer = csv.DictWriter(csvfile, fieldnames=statistics[0].keys(), delimiter=';')
     writer.writeheader()
     for s in statistics:
         writer.writerow(s)
+
+
+with open('Test.csv', 'r') as csvfile:
+    csv_content = csvfile.read()
+
+csv_content = csv_content.replace('.', ',')
+
+with open('Test.csv', 'w', newline='') as csvfile:
+    csvfile.write(csv_content)
