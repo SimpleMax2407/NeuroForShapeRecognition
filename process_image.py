@@ -111,12 +111,16 @@ def process_image(n: NeuroNetwork, size_x: int, size_y: int, shapes_names, init,
 
             mask = cv2.inRange(hsv, l_b, u_b)
 
-        # define kernel size
-        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        # define kernel
+        kernel = np.array([[ 0, -1, -1, -1,  0],
+                           [-1,  1,  1,  1, -1],
+                           [-1,  1,  5,  1, -1],
+                           [-1,  1,  1,  1, -1],
+                           [ 0, -1, -1, -1,  0]])
 
         # filter mask from noises
-        filtered_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-        filtered_mask = cv2.morphologyEx(filtered_mask, cv2.MORPH_OPEN, kernel)
+        #filtered_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        filtered_mask = cv2.filter2D(src=mask, ddepth=-1, kernel=kernel)
 
         # find contours
         contours = cv2.findContours(filtered_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -172,6 +176,9 @@ def process_image(n: NeuroNetwork, size_x: int, size_y: int, shapes_names, init,
             ang_y = (y + h/2 - size_fy/2)/size_fy * v_fow
 
             print(f'Position: {ang_x} deg, {ang_y} deg')
+
+            print(f'Mask shape: {mask.shape}')
+            print(f'Filtered mask shape: {filtered_mask.shape}')
 
             if w < size_x or h < size_y:
                 print('Object is too little')
